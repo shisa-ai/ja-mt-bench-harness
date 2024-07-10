@@ -2,7 +2,7 @@
 
 This is a fork of the original [lm-sys/FastChat](https://github.com/lm-sys/FastChat) repo, but with support for evaluating the MT-Bench scores of language models in 6 languages (en, ru, ja, zh, de, fr).
 
-See [here](https://github.com/Peter-Devine/multilingual_mt_bench/tree/main/fastchat/llm_judge
+See [here](https://github.com/lightblue-tech/multilingual_mt_bench/tree/main/fastchat/llm_judge
 ) for more details on how to use this repo, what it contains, and how to contribute more languages.
 
 
