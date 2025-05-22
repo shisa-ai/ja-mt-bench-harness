@@ -96,23 +96,44 @@ def load_questions(question_file: str, begin: Optional[int], end: Optional[int])
     return questions
 
 
-def load_model_answers(answer_dir: str):
+def load_model_answers(answer_dir: str, prioritize_filename: bool = False):
     """Load model answers.
 
     The return value is a python dict of type:
     Dict[model_name: str -> Dict[question_id: int -> answer: dict]]
+    
+    Args:
+        answer_dir: Directory containing model answers
+        prioritize_filename: If True, use filename as model name instead of model_id
+                             This is useful for reference answers where filenames matter
     """
     filenames = glob.glob(os.path.join(answer_dir, "*.jsonl"))
     filenames.sort()
     model_answers = {}
 
     for filename in filenames:
-        model_name = os.path.basename(filename)[:-6]
+        # Get the model name from the filename (without .jsonl extension)
+        file_model_name = os.path.basename(filename)[:-6]
+        
+        # If this is a model answer file, we need to determine the original model name
+        # by examining the content of the file to get the model_id
         answer = {}
+        original_model_name = None
         with open(filename) as fin:
             for line in fin:
-                line = json.loads(line)
-                answer[line["question_id"]] = line
+                data = json.loads(line)
+                answer[data["question_id"]] = data
+                
+                # If this is the first line and it has model_id, use that as the original model name
+                if original_model_name is None and "model_id" in data and not prioritize_filename:
+                    original_model_name = data["model_id"]
+        
+        # If prioritize_filename is True, always use the filename as the model name
+        # Otherwise, use the original model name if found, otherwise use the filename-derived name
+        if prioritize_filename:
+            model_name = file_model_name
+        else:
+            model_name = original_model_name if original_model_name else file_model_name
         model_answers[model_name] = answer
 
     return model_answers

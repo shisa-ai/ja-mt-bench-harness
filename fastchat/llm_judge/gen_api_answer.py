@@ -125,7 +125,9 @@ if __name__ == "__main__":
     if args.answer_file:
         answer_file = args.answer_file
     else:
-        answer_file = f"data/{args.bench_name}/model_answer/{args.model}.jsonl"
+        # Replace slashes with double underscores in model name to avoid creating subdirectories
+        safe_model_name = args.model.replace('/', '__')
+        answer_file = f"data/{args.bench_name}/model_answer/{safe_model_name}.jsonl"
     print(f"Output to {answer_file}")
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.parallel) as executor:

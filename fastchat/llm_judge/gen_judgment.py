@@ -221,7 +221,8 @@ if __name__ == "__main__":
 
     # Load answers
     model_answers = load_model_answers(answer_dir)
-    ref_answers = load_model_answers(ref_answer_dir)
+    # Use prioritize_filename=True for reference answers to use filename instead of model_id
+    ref_answers = load_model_answers(ref_answer_dir, prioritize_filename=True)
 
     # Load judge
     judge_prompts = load_judge_prompts(args.judge_file)
@@ -237,16 +238,20 @@ if __name__ == "__main__":
     if args.mode == "single":
         judges = make_judge_single(args.judge_model, judge_prompts)
         play_a_match_func = play_a_match_single
+        # Replace slashes with double underscores in model name to avoid creating subdirectories
+        safe_judge_model = args.judge_model.replace('/', '__')
         output_file = (
-            f"data/{args.bench_name}/model_judgment/{args.judge_model}_single.jsonl"
+            f"data/{args.bench_name}/model_judgment/{safe_judge_model}_single.jsonl"
         )
         make_match_func = make_match_single
         baseline_model = None
     else:
         judges = make_judge_pairwise(args.judge_model, judge_prompts)
         play_a_match_func = play_a_match_pair
+        # Replace slashes with double underscores in model name to avoid creating subdirectories
+        safe_judge_model = args.judge_model.replace('/', '__')
         output_file = (
-            f"data/{args.bench_name}/model_judgment/{args.judge_model}_pair.jsonl"
+            f"data/{args.bench_name}/model_judgment/{safe_judge_model}_pair.jsonl"
         )
         if args.mode == "pairwise-all":
             make_match_func = make_match_all_pairs
