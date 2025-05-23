@@ -138,7 +138,9 @@ def analyze_mt_bench_scores(
     bench_name: str,
     model_list: List[str],
     output_dir: Optional[str] = None,
-    judge_name: Optional[str] = None
+    judge_name: Optional[str] = None,
+    no_display: bool = False,
+    show_only_summary: bool = True
 ) -> None:
     """Analyze MT-Bench scores and generate spider plots.
     
@@ -241,7 +243,8 @@ def analyze_mt_bench_scores(
 
             model = j[key_name]
             question_id = j["question_id"]
-            turn = j.get("turn", 0)  # Default to turn 0 if not specified
+            # Use the actual turn from the data (usually 1 or 2)
+            turn = j.get("turn", 1)  # Default to turn 1 if not specified
             score = j["score"]
             category = question_categories.get(question_id, "unknown")
 
@@ -288,29 +291,20 @@ def analyze_mt_bench_scores(
             print(f"\n{judge_name}:")
             
             # Safely get turn averages with default of 0 if turn doesn't exist
-            turn0_avg = avg_scores_by_judge_model_turn[judge_name][model].get(0, 0)
             turn1_avg = avg_scores_by_judge_model_turn[judge_name][model].get(1, 0)
-            overall_avg = (turn0_avg + turn1_avg) / 2 if turn1_avg > 0 else turn0_avg
+            turn2_avg = avg_scores_by_judge_model_turn[judge_name][model].get(2, 0)
+            overall_avg = (turn1_avg + turn2_avg) / 2 if turn2_avg > 0 else turn1_avg
 
-            print(f"  Turn 1 Average: {turn0_avg:.2f}")
-            if turn1_avg > 0:
-                print(f"  Turn 2 Average: {turn1_avg:.2f}")
+            print(f"  Turn 1 Average: {turn1_avg:.2f}")
+            if turn2_avg > 0:
+                print(f"  Turn 2 Average: {turn2_avg:.2f}")
                 print(f"  Overall Average: {overall_avg:.2f}")
             else:
                 print("  Turn 2: Not evaluated")
 
             # Only print category scores if the turn exists
-            if 0 in avg_scores_by_judge_model_turn_category[judge_name][model]:
+            if 1 in avg_scores_by_judge_model_turn_category[judge_name][model]:
                 print("\n  Category Scores (Turn 1):")
-                for cat in CATEGORIES:
-                    cat_score = avg_scores_by_judge_model_turn_category[judge_name][model][0].get(cat, float('nan'))
-                    if np.isnan(cat_score):
-                        print(f"    {cat}: N/A")
-                    else:
-                        print(f"    {cat}: {cat_score:.2f}")
-
-            if turn1_avg > 0 and 1 in avg_scores_by_judge_model_turn_category[judge_name][model]:
-                print("\n  Category Scores (Turn 2):")
                 for cat in CATEGORIES:
                     cat_score = avg_scores_by_judge_model_turn_category[judge_name][model][1].get(cat, float('nan'))
                     if np.isnan(cat_score):
@@ -318,54 +312,100 @@ def analyze_mt_bench_scores(
                     else:
                         print(f"    {cat}: {cat_score:.2f}")
 
-    # Create radar charts for each judge
-    for judge_name in judge_names:
-        for turn in [0, 1]:
-            # Skip turn if no models have scores for it from this judge
-            models_with_turn = [m for m in model_list if m in models_by_judge[judge_name] and 
-                               turn in scores_by_judge_model_turn[judge_name][m] and 
-                               len(scores_by_judge_model_turn[judge_name][m][turn]) > 0]
-            
-            if not models_with_turn:
-                continue
-
-            # Set up the radar chart
-            N = len(CATEGORIES)
-            theta = radar_factory(N, frame='polygon')
-
-            fig, ax = plt.subplots(figsize=(10, 8), subplot_kw=dict(projection='radar'))
-
-            # Plot each model
-            for i, model in enumerate(models_with_turn):
-                color = plt.cm.tab10(i % 10)
-                cat_scores = []
-
+            if turn2_avg > 0 and 2 in avg_scores_by_judge_model_turn_category[judge_name][model]:
+                print("\n  Category Scores (Turn 2):")
                 for cat in CATEGORIES:
-                    score = avg_scores_by_judge_model_turn_category[judge_name][model][turn].get(cat, float('nan'))
-                    cat_scores.append(score if not np.isnan(score) else 0)
+                    cat_score = avg_scores_by_judge_model_turn_category[judge_name][model][2].get(cat, float('nan'))
+                    if np.isnan(cat_score):
+                        print(f"    {cat}: N/A")
+                    else:
+                        print(f"    {cat}: {cat_score:.2f}")
 
-                ax.plot(theta, cat_scores, color=color, label=model)
-                ax.fill(theta, cat_scores, facecolor=color, alpha=0.25)
+    # Create average scores across turns for each judge
+    avg_scores_by_judge_model_category = defaultdict(lambda: defaultdict(dict))
+    
+    # Keep track of figures to display
+    figures_to_display = []
+    
+    # For summary plot
+    all_model_category_scores = {}
+    all_model_overall_scores = {}
+    
+    # Calculate average scores across turns
+    for judge_name in judge_names:
+        for model in models_by_judge[judge_name]:
+            for cat in CATEGORIES:
+                scores = []
+                # Gather scores from all turns
+                for turn in [1, 2]:
+                    if turn in avg_scores_by_judge_model_turn_category[judge_name][model]:
+                        score = avg_scores_by_judge_model_turn_category[judge_name][model][turn].get(cat, float('nan'))
+                        if not np.isnan(score):
+                            scores.append(score)
+                
+                # Calculate the average if we have scores
+                if scores:
+                    score = np.mean(scores)
+                    avg_scores_by_judge_model_category[judge_name][model][cat] = score
+                    
+                    # Store for summary plot
+                    if model not in all_model_category_scores:
+                        all_model_category_scores[model] = {}
+                    if cat not in all_model_category_scores[model]:
+                        all_model_category_scores[model][cat] = []
+                    all_model_category_scores[model][cat].append(score)
+                else:
+                    avg_scores_by_judge_model_category[judge_name][model][cat] = float('nan')
 
-            # Set the labels and title
-            ax.set_varlabels(CATEGORIES)
-            ax.set_ylim(0, 10)
-            ax.set_yticks([2, 4, 6, 8, 10])
-            ax.set_title(f"{judge_name} - MT-Bench Category Scores (Turn {turn+1})")
+    # Create radar charts for each judge (turns combined)
+    for judge_name in judge_names:
+        # Get models that have scores from this judge
+        models_with_scores = [m for m in model_list if m in models_by_judge[judge_name]]
+        
+        if not models_with_scores:
+            continue
 
-            # Add a legend
-            plt.legend(loc='upper right', bbox_to_anchor=(0.1, 0.1))
+        # Set up the radar chart
+        N = len(CATEGORIES)
+        theta = radar_factory(N, frame='polygon')
 
-            # Save the figure if output_dir is provided
-            if output_dir:
-                os.makedirs(output_dir, exist_ok=True)
-                plt.savefig(os.path.join(output_dir, f"{judge_name}_radar_turn{turn+1}.png"), dpi=300, bbox_inches='tight')
+        fig, ax = plt.subplots(figsize=(10, 8), subplot_kw=dict(projection='radar'))
 
-            plt.tight_layout()
-            plt.show()
+        # Plot each model
+        for i, model in enumerate(models_with_scores):
+            color = plt.cm.tab10(i % 10)
+            cat_scores = []
+
+            for cat in CATEGORIES:
+                score = avg_scores_by_judge_model_category[judge_name][model].get(cat, float('nan'))
+                cat_scores.append(score if not np.isnan(score) else 0)
+
+            ax.plot(theta, cat_scores, color=color, label=model)
+            ax.fill(theta, cat_scores, facecolor=color, alpha=0.25)
+
+        # Set the labels and title
+        ax.set_varlabels(CATEGORIES)
+        ax.set_ylim(0, 10)
+        ax.set_yticks([2, 4, 6, 8, 10])
+        ax.set_title(f"{judge_name} - MT-Bench Average Category Scores")
+
+        # Add a legend
+        plt.legend(loc='upper right', bbox_to_anchor=(0.1, 0.1))
+
+        # Save the figure if output_dir is provided
+        if output_dir:
+            os.makedirs(output_dir, exist_ok=True)
+            plt.savefig(os.path.join(output_dir, f"{judge_name}_radar_average.png"), dpi=300, bbox_inches='tight')
+
+        plt.tight_layout()
+        
+        # Only store this figure if we want to show all plots
+        if not no_display and not show_only_summary:
+            figures_to_display.append(fig)
+        else:
+            plt.close()
             
-        # Also create a comparison chart across judges for each model
-        # This shows how different judges score the same model
+        # Create a comparison chart across judges for each model (using averages)
         for model in model_list:
             if model not in all_available_models:
                 continue
@@ -376,51 +416,168 @@ def analyze_mt_bench_scores(
             if len(judges_with_model) <= 1:
                 continue  # Skip if only one judge scored this model
                 
-            for turn in [0, 1]:
-                # Skip turn if no judges have scores for it
-                judges_with_turn = [j for j in judges_with_model if 
-                                   turn in avg_scores_by_judge_model_turn[j][model]]
-                
-                if not judges_with_turn:
+            # Set up the radar chart
+            N = len(CATEGORIES)
+            theta = radar_factory(N, frame='polygon')
+
+            fig, ax = plt.subplots(figsize=(10, 8), subplot_kw=dict(projection='radar'))
+
+            # Plot each judge's scores
+            for i, judge in enumerate(judges_with_model):
+                color = plt.cm.Set2(i % 8)
+                cat_scores = []
+
+                for cat in CATEGORIES:
+                    score = avg_scores_by_judge_model_category[judge][model].get(cat, float('nan'))
+                    cat_scores.append(score if not np.isnan(score) else 0)
+
+                ax.plot(theta, cat_scores, color=color, label=judge)
+                ax.fill(theta, cat_scores, facecolor=color, alpha=0.25)
+
+            # Set the labels and title
+            ax.set_varlabels(CATEGORIES)
+            ax.set_ylim(0, 10)
+            ax.set_yticks([2, 4, 6, 8, 10])
+            ax.set_title(f"{model} - Judge Comparison (Average Scores)")
+
+            # Add a legend
+            plt.legend(loc='upper right', bbox_to_anchor=(0.1, 0.1))
+
+            # Save the figure if output_dir is provided
+            if output_dir:
+                os.makedirs(output_dir, exist_ok=True)
+                # Create a safe filename by replacing slashes with underscores
+                safe_model_name = model.replace('/', '_')
+                plt.savefig(os.path.join(output_dir, f"{safe_model_name}_judge_comparison_average.png"), 
+                            dpi=300, bbox_inches='tight')
+
+            plt.tight_layout()
+            
+            # Store the figure if we want to display it later, otherwise close it
+            if no_display or show_only_summary:
+                plt.close()
+            else:
+                figures_to_display.append(fig)
+
+    # Create visualizations based on the number of judges
+    if not no_display:
+        # Create a list of models that have scores
+        models_to_plot = [m for m in model_list if m in all_model_category_scores]
+        
+        if not models_to_plot:
+            print("No models with scores to plot")
+            return
+            
+        # Create radar factory
+        N = len(CATEGORIES)
+        theta = radar_factory(N, frame='polygon')
+        
+        # Check if we have a single judge or multiple judges
+        if len(judge_names) == 1 and judge_name is not None:
+            # SINGLE JUDGE MODE: Show all models on one plot
+            single_judge = judge_names[0]
+            
+            # Create a single plot
+            plt.figure(figsize=(12, 12))
+            ax = plt.subplot(111, projection='radar')
+            
+            # Plot each model
+            for i, model in enumerate(models_to_plot):
+                if model not in models_by_judge[single_judge]:
                     continue
                     
-                # Set up the radar chart
-                N = len(CATEGORIES)
-                theta = radar_factory(N, frame='polygon')
-
-                fig, ax = plt.subplots(figsize=(10, 8), subplot_kw=dict(projection='radar'))
-
-                # Plot each judge's scores
-                for i, judge in enumerate(judges_with_turn):
-                    color = plt.cm.Set2(i % 8)
+                # Use a nice color palette
+                color = plt.cm.tab10(i % 10)
+                cat_scores = []
+                
+                for cat in CATEGORIES:
+                    score = avg_scores_by_judge_model_category[single_judge][model].get(cat, float('nan'))
+                    cat_scores.append(score if not np.isnan(score) else 0)
+                
+                ax.plot(theta, cat_scores, color=color, label=model, linewidth=2)
+                ax.fill(theta, cat_scores, facecolor=color, alpha=0.25)
+            
+            # Set the labels and title
+            ax.set_varlabels(CATEGORIES)
+            ax.set_ylim(0, 10)
+            ax.set_yticks([2, 4, 6, 8, 10])
+            ax.set_title(f"{single_judge} Judge - Model Comparison")
+            
+            # Add a legend
+            plt.legend(loc='upper right', bbox_to_anchor=(0.1, 0.1))
+            
+            # Save the figure if output_dir is provided
+            if output_dir:
+                os.makedirs(output_dir, exist_ok=True)
+                plt.savefig(os.path.join(output_dir, f"{single_judge}_model_comparison.png"),
+                          dpi=300, bbox_inches='tight')
+            
+            plt.tight_layout()
+            plt.show()
+            
+        else:
+            # MULTIPLE JUDGES MODE: Show each model with all its judges
+            # Determine grid layout for subplots - make it square
+            num_models = len(models_to_plot)
+            cols = int(np.ceil(np.sqrt(num_models)))
+            rows = int(np.ceil(num_models / cols))
+            
+            # Create figure with subplots - square form factor
+            fig_size = max(10, 5 * cols)  # Base size on number of plots, but with a minimum
+            fig, axes = plt.subplots(rows, cols, figsize=(fig_size, fig_size), 
+                                   subplot_kw=dict(projection='radar'))
+            
+            # Convert to iterable if only one subplot
+            if num_models == 1:
+                axes = np.array([axes])
+            
+            # Flatten axes array for easier indexing
+            axes = np.array(axes).flatten()
+            
+            # Plot each model with all its judges
+            for i, model in enumerate(models_to_plot):
+                ax = axes[i]
+                
+                # Find all judges that scored this model
+                judges_with_model = [j for j in judge_names if model in models_by_judge[j]]
+                
+                # Plot each judge's scores for this model with improved color scheme
+                for j, judge in enumerate(judges_with_model):
+                    # Use a better color scheme - Set2 has nicer colors than tab10
+                    color = plt.cm.Set2(j % 8)
                     cat_scores = []
-
+                    
                     for cat in CATEGORIES:
-                        score = avg_scores_by_judge_model_turn_category[judge][model][turn].get(cat, float('nan'))
+                        score = avg_scores_by_judge_model_category[judge][model].get(cat, float('nan'))
                         cat_scores.append(score if not np.isnan(score) else 0)
-
-                    ax.plot(theta, cat_scores, color=color, label=judge)
-                    ax.fill(theta, cat_scores, facecolor=color, alpha=0.25)
-
-                # Set the labels and title
+                    
+                    ax.plot(theta, cat_scores, color=color, label=judge, linewidth=2)
+                    ax.fill(theta, cat_scores, facecolor=color, alpha=0.25)  # Increased opacity
+                
+                # Set the labels and title for this subplot
                 ax.set_varlabels(CATEGORIES)
                 ax.set_ylim(0, 10)
                 ax.set_yticks([2, 4, 6, 8, 10])
-                ax.set_title(f"{model} - Judge Comparison (Turn {turn+1})")
-
-                # Add a legend
-                plt.legend(loc='upper right', bbox_to_anchor=(0.1, 0.1))
-
-                # Save the figure if output_dir is provided
-                if output_dir:
-                    os.makedirs(output_dir, exist_ok=True)
-                    # Create a safe filename by replacing slashes with underscores
-                    safe_model_name = model.replace('/', '_')
-                    plt.savefig(os.path.join(output_dir, f"{safe_model_name}_judge_comparison_turn{turn+1}.png"), 
-                                dpi=300, bbox_inches='tight')
-
-                plt.tight_layout()
-                plt.show()
+                ax.set_title(f"{model} - Judge Comparison")
+                
+                # Add a legend - only for plots with data
+                if judges_with_model:
+                    ax.legend(loc='upper right', bbox_to_anchor=(0.1, 0.1), fontsize='small')
+            
+            # Hide any unused subplots
+            for j in range(num_models, len(axes)):
+                axes[j].set_visible(False)
+            
+            plt.tight_layout(pad=3.0)
+            
+            # Save the figure if output_dir is provided
+            if output_dir:
+                os.makedirs(output_dir, exist_ok=True)
+                plt.savefig(os.path.join(output_dir, f"all_models_judge_comparison.png"), 
+                          dpi=300, bbox_inches='tight')
+            
+            # Show the plot
+            plt.show()
 
 def main():
     parser = argparse.ArgumentParser(description="Analyze MT-Bench scores and generate spider plots")
@@ -433,14 +590,20 @@ def main():
                         help="Directory to save output figures (optional)")
     parser.add_argument("--judge", type=str, default=None,
                         help="Specific judge to use (default: use all available judges)")
+    parser.add_argument("--no-display", action="store_true",
+                        help="Don't display any plots interactively")
+    parser.add_argument("--show-only-summary", action="store_true", default=True,
+                        help="Only show the summary plot (default: True)")
 
     args = parser.parse_args()
-
+    
     analyze_mt_bench_scores(
         bench_name=args.bench_name,
         model_list=args.model_list,
         output_dir=args.output_dir,
-        judge_name=args.judge
+        judge_name=args.judge,
+        no_display=args.no_display,
+        show_only_summary=args.show_only_summary
     )
 
 if __name__ == "__main__":
