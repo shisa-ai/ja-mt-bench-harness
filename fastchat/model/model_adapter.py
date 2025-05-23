@@ -81,7 +81,9 @@ OPENAI_MODEL_LIST = (
     "gpt-4-turbo-browsing",
     "gpt-4-turbo-2024-04-09",
     "gpt-4o",
+    "gpt-4.1",
     "gpt-4.1-2025-04-14",
+    "gpt-4.1-mini",
     "gpt-4.1-mini-2025-04-14",
 )
 
