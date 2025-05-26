@@ -12,7 +12,7 @@ As of 2025-05 this is the approximate cost for judging a single run (GPT 4.1 tok
 | gpt-4o (gpt-4o-2024-08-06)           | $2.50     | $10.00     | 200,000      | 50,000        | $0.50      | $0.50       | ~$1.00     |
 | gpt-4.1-2025-04-14                   | $2.00     | $8.00      | 200,000      | 50,000        | $0.40      | $0.40       | ~$1.00     |
 | gpt-4.1-mini-2025-04-14              | $0.40     | $1.60      | 200,000      | 50,000        | $0.08      | $0.08       | ~$0.20     |
-| gpt-4-0613                           | $30.00    | $60.00     | 250,000      | 25,000        | $2.50      | $1.50       | ~$4.00     |
+| gpt-4-0613                           | $30.00    | $60.00     | 250,000      | 25,000        | $7.50      | $1.50       | ~$9.00     |
 
 This is a fork of:
 - [lightblue-tech/multilingual-mt-bench](https://github.com/lightblue-tech/multilingual-mt-bench)
