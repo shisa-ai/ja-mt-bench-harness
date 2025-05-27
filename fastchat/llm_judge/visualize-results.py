@@ -501,7 +501,7 @@ def analyze_mt_bench_scores(
             ax.set_varlabels(CATEGORIES)
             ax.set_ylim(0, 10)
             ax.set_yticks([2, 4, 6, 8, 10])
-            ax.set_title(f"{single_judge} Judge - Model Comparison")
+            ax.set_title(f"JA MT-Bench (Judge: {single_judge})")
             
             # Add a legend
             plt.legend(loc='upper right', bbox_to_anchor=(0.1, 0.1))
