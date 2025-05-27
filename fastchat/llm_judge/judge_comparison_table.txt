@@ -4,50 +4,50 @@ NOTE: Only showing models that have scores from all judges
 MT-Bench Summary: Average Scores by Category and Judge
 Category           GPT-4-Turbo    GPT-4o    GPT-4.1    GPT-4.1-mini
 ---------------  -------------  --------  ---------  --------------
-Overall Average           8.07      8.32       8.25            8.3
-coding                    7.22      8.16       7.9             7.92
-extraction                8.96      8.76       8.62            8.39
-humanities                9.21      8.8        8.69            8.82
-math                      6.49      7.79       8.39            8.42
-reasoning                 6.31      6.96       6.86            7.4
-roleplay                  8.65      8.73       8.65            8.53
-stem                      8.77      8.66       8.37            8.46
-writing                   8.96      8.67       8.49            8.47
+Overall Average           8.09      8.32       8.24            8.29
+coding                    7.25      8.17       7.91            7.93
+extraction                8.98      8.79       8.65            8.39
+humanities                9.22      8.8        8.68            8.8
+math                      6.52      7.79       8.38            8.4
+reasoning                 6.38      6.99       6.88            7.41
+roleplay                  8.65      8.7        8.59            8.48
+stem                      8.79      8.65       8.37            8.44
+writing                   8.97      8.68       8.5             8.47
 
 ================================================================================
 MT-Bench Scores by Category and Judge (All Models)
 Category              GPT-4-Turbo    GPT-4o      GPT-4.1     GPT-4.1-mini
 --------------------  -------------  ----------  ----------  --------------
-Overall Average       8.07           8.32        8.25        8.30
-Overall (Turn 1)      8.20           8.71        8.63        8.56
-Overall (Turn 2)      7.94           7.92        7.86        8.04
+Overall Average       8.09           8.32        8.24        8.29
+Overall (Turn 1)      8.21           8.71        8.62        8.54
+Overall (Turn 2)      7.98           7.94        7.87        8.04
 --------------------  ----------     ----------  ----------  ----------
-coding (Average)      7.22           8.16        7.90        7.92
-extraction (Average)  8.96           8.76        8.62        8.39
-humanities (Average)  9.21           8.80        8.69        8.82
-math (Average)        6.49           7.79        8.39        8.42
-reasoning (Average)   6.31           6.96        6.86        7.40
-roleplay (Average)    8.65           8.73        8.65        8.53
-stem (Average)        8.77           8.66        8.37        8.46
-writing (Average)     8.96           8.67        8.49        8.47
+coding (Average)      7.25           8.17        7.91        7.93
+extraction (Average)  8.98           8.79        8.65        8.39
+humanities (Average)  9.22           8.80        8.68        8.80
+math (Average)        6.52           7.79        8.38        8.40
+reasoning (Average)   6.38           6.99        6.88        7.41
+roleplay (Average)    8.65           8.70        8.59        8.48
+stem (Average)        8.79           8.65        8.37        8.44
+writing (Average)     8.97           8.68        8.50        8.47
 --- Turn 1 ---        ----------     ----------  ----------  ----------
-coding                7.36           8.56        8.14        8.07
-extraction            8.82           9.03        8.82        8.46
-humanities            8.93           8.76        8.63        8.79
-math                  7.36           8.69        9.17        8.99
-reasoning             6.67           7.58        7.40        7.98
-roleplay              8.65           8.90        8.87        8.60
-stem                  8.82           9.11        8.83        8.65
-writing               8.96           9.08        9.23        8.94
+coding                7.39           8.55        8.14        8.06
+extraction            8.84           9.06        8.83        8.45
+humanities            8.94           8.76        8.62        8.77
+math                  7.35           8.65        9.13        8.94
+reasoning             6.75           7.60        7.42        8.00
+roleplay              8.63           8.82        8.78        8.52
+stem                  8.83           9.10        8.82        8.64
+writing               8.97           9.08        9.22        8.93
 --- Turn 2 ---        ----------     ----------  ----------  ----------
-coding                7.08           7.76        7.66        7.77
-extraction            9.09           8.49        8.43        8.32
-humanities            9.49           8.83        8.76        8.84
-math                  5.61           6.88        7.60        7.85
-reasoning             5.94           6.34        6.33        6.81
-roleplay              8.65           8.57        8.43        8.47
-stem                  8.73           8.22        7.92        8.26
-writing               8.96           8.25        7.76        8.01
+coding                7.12           7.79        7.68        7.81
+extraction            9.12           8.52        8.46        8.34
+humanities            9.49           8.84        8.75        8.83
+math                  5.68           6.93        7.62        7.86
+reasoning             6.01           6.37        6.35        6.82
+roleplay              8.67           8.57        8.39        8.44
+stem                  8.74           8.19        7.92        8.23
+writing               8.98           8.28        7.77        8.01
 
 ================================================================================
 Qwen/Qwen3-235B-A22B
@@ -223,6 +223,41 @@ reasoning             7.40           7.40        7.20        7.30
 roleplay              9.50           8.60        7.80        8.30
 stem                  9.00           8.30        7.50        7.90
 writing               9.80           8.70        8.20        8.40
+
+================================================================================
+gpt-4-0613
+Category              GPT-4-Turbo    GPT-4o      GPT-4.1     GPT-4.1-mini
+--------------------  -------------  ----------  ----------  --------------
+Overall Average       9.00           8.44        8.16        8.06
+Overall (Turn 1)      8.80           8.53        8.30        8.04
+Overall (Turn 2)      9.20           8.35        8.01        8.09
+--------------------  ----------     ----------  ----------  ----------
+coding (Average)      8.50           8.50        8.20        8.25
+extraction (Average)  9.80           9.40        9.20        8.50
+humanities (Average)  9.40           8.90        8.45        8.45
+math (Average)        7.65           7.90        8.10        7.95
+reasoning (Average)   8.95           7.55        7.30        7.70
+roleplay (Average)    8.75           7.95        7.15        7.20
+stem (Average)        9.40           8.30        8.30        8.00
+writing (Average)     9.55           9.00        8.55        8.45
+--- Turn 1 ---        ----------     ----------  ----------  ----------
+coding                8.40           8.50        8.20        7.80
+extraction            9.70           9.60        9.10        8.20
+humanities            9.20           8.90        8.40        8.30
+math                  7.00           7.80        8.10        7.80
+reasoning             9.60           8.00        7.90        8.30
+roleplay              7.90           7.20        6.80        6.70
+stem                  9.40           9.00        8.70        8.40
+writing               9.20           9.20        9.20        8.80
+--- Turn 2 ---        ----------     ----------  ----------  ----------
+coding                8.60           8.50        8.20        8.70
+extraction            9.90           9.20        9.30        8.80
+humanities            9.60           8.90        8.50        8.60
+math                  8.30           8.00        8.10        8.10
+reasoning             8.30           7.10        6.70        7.10
+roleplay              9.60           8.70        7.50        7.70
+stem                  9.40           7.60        7.90        7.60
+writing               9.90           8.80        7.90        8.10
 
 ================================================================================
 gpt-4-turbo
