@@ -87,6 +87,8 @@ baseline_70b_color = "lightgrey"
 
 # --- Step 3: Plot full 405B + baseline graph ---
 def plot_full_family(df, output_path):
+    fig, ax = plt.subplots(figsize=(12, 8))  # width=14 inches, height=8 inches
+
     handles_labels = []
     # Draw all but Full FP16 and 70B baseline
     for model, label in main_models_labels:
@@ -99,7 +101,7 @@ def plot_full_family(df, output_path):
             row = df[df["Model"] == model]
         if not row.empty:
             scores = row.iloc[0][categories].values
-            line, = plt.plot(category_labels, scores, marker="o", label=display_label, linewidth=1.3, color=color, zorder=2)
+            line, = plt.plot(category_labels, scores, marker="o", label=display_label, linewidth=1.0, color=color, zorder=2)
             handles_labels.append((line, display_label))
     # Draw 70B baseline above quants, but before FP16
     baseline_row = df[df["Model"] == baseline_70b_model]
@@ -114,13 +116,20 @@ def plot_full_family(df, output_path):
         row_fp16 = df[df["Model"] == model_fp16]
     if not row_fp16.empty:
         scores_fp16 = row_fp16.iloc[0][categories].values
-        line_fp16, = plt.plot(category_labels, scores_fp16, marker="o", label=legend_with_size["Full FP16"], linewidth=2.8, color=custom_colors["Full FP16"], zorder=4)
+        line_fp16, = plt.plot(category_labels, scores_fp16, marker="o", label=legend_with_size["Full FP16"], linewidth=2.5, color=custom_colors["Full FP16"], zorder=4)
         handles_labels = [(line_fp16, legend_with_size["Full FP16"])] + handles_labels
     handles, labels = zip(*handles_labels)
-    plt.legend(handles, labels, loc="upper left", bbox_to_anchor=(1.01, 1), fontsize="medium", title="Model")
+
+    leg = plt.legend(handles, labels, loc="upper left", bbox_to_anchor=(1.02, 1.01), fontsize="medium")
+    leg.get_frame().set_visible(False)
+
+    ax.yaxis.grid(True, which='major', color='#e5e5e5', linewidth=1, zorder=0)
+    ax.set_axisbelow(True)
+    ax.set_yticks(range(0, 11, 1))  # Show grid at every 1.0
+
     plt.ylabel("Score")
     plt.title("Shisa V2 405B JA MT-Bench (Judge: GPT-4.1)")
-    plt.ylim(0, 10)
+    plt.ylim(5, 10)
     plt.xticks(rotation=45)
     plt.tight_layout()
     plt.savefig(output_path, dpi=300)
