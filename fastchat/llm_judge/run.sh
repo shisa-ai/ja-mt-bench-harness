@@ -91,17 +91,17 @@ echo "============================="
 echo ""
 echo "Step 2: Generating judgments..."
 
-echo "Running judgment with gpt-4-turbo..."
-python gen_judgment.py --bench-name ja_mt_bench --model-list ${MODEL} --judge-model gpt-4-turbo --mode single --parallel 20 --skip_confirm
+# echo "Running judgment with gpt-4-turbo..."
+# python gen_judgment.py --bench-name ja_mt_bench --model-list ${MODEL} --judge-model gpt-4-turbo --mode single --parallel 20 --skip_confirm
 
-echo "Running judgment with gpt-4o..."
-python gen_judgment.py --bench-name ja_mt_bench --model-list ${MODEL} --judge-model gpt-4o --mode single --parallel 20 --skip_confirm
+# echo "Running judgment with gpt-4o..."
+# python gen_judgment.py --bench-name ja_mt_bench --model-list ${MODEL} --judge-model gpt-4o --mode single --parallel 20 --skip_confirm
 
 echo "Running judgment with gpt-4.1-2025-04-14..."
 python gen_judgment.py --bench-name ja_mt_bench --model-list ${MODEL} --judge-model gpt-4.1-2025-04-14 --mode single --parallel 20 --skip_confirm
 
-echo "Running judgment with gpt-4.1-mini-2025-04-14..."
-python gen_judgment.py --bench-name ja_mt_bench --model-list ${MODEL} --judge-model gpt-4.1-mini-2025-04-14 --mode single --parallel 20 --skip_confirm
+# echo "Running judgment with gpt-4.1-mini-2025-04-14..."
+# python gen_judgment.py --bench-name ja_mt_bench --model-list ${MODEL} --judge-model gpt-4.1-mini-2025-04-14 --mode single --parallel 20 --skip_confirm
 
 echo "Done generating judgments."
 echo ""
