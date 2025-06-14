@@ -5,6 +5,7 @@ python gen_judgment.py --model-list [LIST-OF-MODEL-ID] --parallel [num-concurren
 import argparse
 from concurrent.futures import ThreadPoolExecutor
 import json
+import re
 
 import numpy as np
 from tqdm import tqdm
@@ -22,6 +23,28 @@ from fastchat.llm_judge.common import (
     MatchSingle,
     NEED_REF_CATS,
 )
+
+
+reasoning_pattern = re.compile(
+    r"<(think|thinking|reason)>.*?</(think|thinking|reason)>",
+    re.DOTALL | re.IGNORECASE,
+)
+
+
+def strip_reasoning(text: str) -> str:
+    """Remove <think>...</think> style reasoning tags from text."""
+    return reasoning_pattern.sub("", text)
+
+
+def strip_reasoning_from_answers(model_answers: dict) -> None:
+    """In-place removal of reasoning tags from all answers."""
+    for ans in model_answers.values():
+        if "choices" not in ans or not ans["choices"]:
+            continue
+        turns = ans["choices"][0].get("turns", [])
+        for i, turn in enumerate(turns):
+            if isinstance(turn, str):
+                turns[i] = strip_reasoning(turn).strip()
 
 
 def make_match(
@@ -223,6 +246,12 @@ if __name__ == "__main__":
     model_answers = load_model_answers(answer_dir)
     # Use prioritize_filename=True for reference answers to use filename instead of model_id
     ref_answers = load_model_answers(ref_answer_dir, prioritize_filename=True)
+
+	# Strip reasoning tags from all answers before judging
+    for ans_dict in model_answers.values():
+        strip_reasoning_from_answers(ans_dict)
+    for ans_dict in ref_answers.values():
+        strip_reasoning_from_answers(ans_dict)
 
     # Load judge
     judge_prompts = load_judge_prompts(args.judge_file)
