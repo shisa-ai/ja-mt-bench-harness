@@ -1,8 +1,11 @@
 # ja-mt-bench-harness
 
+This is a fork of https://github.com/lightblue-tech/multilingual-mt-bench
+
 This repo is forked 2025-05 specifically to run repeatable "standard" Japanese MT-Bench results that are suitable for reporting/comparison with other models/measurements.
 - Designed to use OpenAI-compatible API (eg for vLLM) for answer generation
 - Use of the standard OpenAI GPT-4 Turbo (`gpt-4-turbo` AKA `gpt-4-turbo-2024-04-09`) for 1:1 comparisons with older models as well as added support/comparison to the latest OpenAI models (`gpt-4.1-2025-04-14` and `gpt-4.1-mini-2025-04-14`)
+- This fork is detached now due to requiring git-lfs for one of the judgement files
 
 As of 2025-05 this is the approximate cost for judging a single run (GPT 4.1 tokenizer is more efficient than the old GPT-4 tokenizer for Japanese):
 
