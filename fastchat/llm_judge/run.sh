@@ -49,14 +49,14 @@ if [ -z "${MODEL}" ]; then
   # Check if model name contains a slash, prompt for API base if needed
   if [[ "${MODEL}" == */* ]]; then
     if [ -z "${OPENAI_API_BASE}" ]; then
-      read -p "Enter OpenAI API base URL (e.g., http://localhost:8080/v1): " OPENAI_API_BASE
+      read -p "Enter OpenAI API base URL (e.g., http://localhost:8000/v1): " OPENAI_API_BASE
     fi
   fi
 fi
 
 # Set default API base for models with slashes if not provided
 if [[ "${MODEL}" == */* && -z "${OPENAI_API_BASE}" ]]; then
-  OPENAI_API_BASE="http://localhost:8080/v1"
+  OPENAI_API_BASE="http://localhost:8000/v1"
   echo "Using default API base: ${OPENAI_API_BASE}"
 fi
 
