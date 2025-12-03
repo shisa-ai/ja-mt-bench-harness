@@ -285,3 +285,121 @@ if 'turn' in df.columns and len(df['turn'].unique()) > 1:
     turn_avg = df.groupby('turn')[judge_names].mean().reset_index()
     print("\n=== Average Scores by Turn ===")
     print(turn_avg.to_string(index=False, float_format=lambda x: f"{x:.2f}"))
+
+# ========================================
+# Per-Category Analysis
+# ========================================
+
+# Load question data to get category information
+question_file = "data/ja_mt_bench/question.jsonl"
+try:
+    with open(question_file, 'r') as f:
+        questions = [json.loads(line) for line in f]
+    question_categories = {q['question_id']: q['category'] for q in questions}
+
+    # Add category to the dataframe
+    df['category'] = df['question_id'].map(question_categories)
+
+    categories = sorted(df['category'].dropna().unique())
+
+    if categories:
+        print("\n" + "=" * 60)
+        print("PER-CATEGORY ANALYSIS")
+        print("=" * 60)
+
+        # 1. Average scores by category and judge
+        print("\n=== Average Scores by Category ===")
+        category_avg = df.groupby('category')[judge_names].mean()
+        print(category_avg.to_string(float_format=lambda x: f"{x:.2f}"))
+
+        # 2. Score differences between judges by category
+        print("\n=== Mean Score Differences by Category ===")
+        for i, judge1 in enumerate(judge_names):
+            for j, judge2 in enumerate(judge_names):
+                if i < j:
+                    print(f"\n{judge2} - {judge1}:")
+                    diff_by_cat = df.groupby('category').apply(
+                        lambda g: (g[judge2] - g[judge1]).mean()
+                    )
+                    for cat in categories:
+                        print(f"  {cat:15s}: {diff_by_cat[cat]:+.3f}")
+
+        # 3. Correlation by category
+        print("\n=== Pearson Correlation by Category ===")
+        corr_table_data = []
+        for cat in categories:
+            cat_df = df[df['category'] == cat]
+            row = {'category': cat}
+            for i, judge1 in enumerate(judge_names):
+                for j2, judge2 in enumerate(judge_names):
+                    if i < j2:
+                        pair_name = f"{judge1[:6]} vs {judge2[:6]}"
+                        if len(cat_df) > 2:
+                            corr, _ = pearsonr(cat_df[judge1], cat_df[judge2])
+                            row[pair_name] = corr
+                        else:
+                            row[pair_name] = float('nan')
+            corr_table_data.append(row)
+
+        corr_table = pd.DataFrame(corr_table_data).set_index('category')
+        print(corr_table.to_string(float_format=lambda x: f"{x:.3f}"))
+
+        # 4. Mean absolute difference by category
+        print("\n=== Mean Absolute Difference by Category ===")
+        mad_table_data = []
+        for cat in categories:
+            cat_df = df[df['category'] == cat]
+            row = {'category': cat}
+            for i, judge1 in enumerate(judge_names):
+                for j2, judge2 in enumerate(judge_names):
+                    if i < j2:
+                        pair_name = f"{judge1[:6]} vs {judge2[:6]}"
+                        mad = np.abs(cat_df[judge2] - cat_df[judge1]).mean()
+                        row[pair_name] = mad
+            mad_table_data.append(row)
+
+        mad_table = pd.DataFrame(mad_table_data).set_index('category')
+        print(mad_table.to_string(float_format=lambda x: f"{x:.3f}"))
+
+        # 5. Standard deviation of scores by category and judge
+        print("\n=== Score Standard Deviation by Category ===")
+        category_std = df.groupby('category')[judge_names].std()
+        print(category_std.to_string(float_format=lambda x: f"{x:.2f}"))
+
+        # 6. Sample counts by category
+        print("\n=== Sample Counts by Category ===")
+        category_counts = df.groupby('category').size()
+        print(category_counts.to_string())
+
+        # 7. Detailed per-category comparison for each judge pair
+        print("\n=== Detailed Per-Category Judge Comparison ===")
+        for i, judge1 in enumerate(judge_names):
+            for j, judge2 in enumerate(judge_names):
+                if i < j:
+                    print(f"\n--- {judge1} vs {judge2} by Category ---")
+                    summary_rows = []
+                    for cat in categories:
+                        cat_df = df[df['category'] == cat]
+                        if len(cat_df) < 2:
+                            continue
+
+                        corr_p, _ = pearsonr(cat_df[judge1], cat_df[judge2])
+                        corr_s, _ = spearmanr(cat_df[judge1], cat_df[judge2])
+                        mean_diff = (cat_df[judge2] - cat_df[judge1]).mean()
+                        mad = np.abs(cat_df[judge2] - cat_df[judge1]).mean()
+                        n = len(cat_df)
+
+                        summary_rows.append({
+                            'Category': cat,
+                            'N': n,
+                            'Pearson': corr_p,
+                            'Spearman': corr_s,
+                            'Mean Diff': mean_diff,
+                            'MAD': mad
+                        })
+
+                    summary_df = pd.DataFrame(summary_rows)
+                    print(summary_df.to_string(index=False, float_format=lambda x: f"{x:.3f}"))
+
+except FileNotFoundError:
+    print(f"\nWarning: Could not load {question_file} for category analysis")
