@@ -430,6 +430,7 @@ def chat_completion_openai(model, conv, temperature, max_tokens, api_dict=None):
         openai.api_base = api_dict["api_base"]
         openai.api_key = api_dict["api_key"]
     output = API_ERROR_OUTPUT
+    use_completion_tokens = model.startswith("gpt-5")
     for _ in range(API_MAX_RETRY):
         try:
             messages = conv.to_openai_api_messages()
@@ -438,10 +439,25 @@ def chat_completion_openai(model, conv, temperature, max_tokens, api_dict=None):
                 messages=messages,
                 n=1,
                 temperature=temperature,
-                max_tokens=max_tokens,
+                **(
+                    {"max_completion_tokens": max_tokens}
+                    if use_completion_tokens
+                    else {"max_tokens": max_tokens}
+                ),
             )
             output = response["choices"][0]["message"]["content"]
             break
+        except openai.error.InvalidRequestError as e:
+            # GPT-5 models require max_completion_tokens instead of max_tokens.
+            if (
+                "max_completion_tokens" in str(e)
+                and "max_tokens" in str(e)
+                and not use_completion_tokens
+            ):
+                use_completion_tokens = True
+                continue
+            print(type(e), e)
+            time.sleep(API_RETRY_SLEEP)
         except openai.error.OpenAIError as e:
             print(type(e), e)
             time.sleep(API_RETRY_SLEEP)
@@ -462,6 +478,7 @@ def chat_completion_openai_azure(model, conv, temperature, max_tokens, api_dict=
     if "azure-" in model:
         model = model[6:]
 
+    use_completion_tokens = model.startswith("gpt-5")
     output = API_ERROR_OUTPUT
     for _ in range(API_MAX_RETRY):
         try:
@@ -471,11 +488,23 @@ def chat_completion_openai_azure(model, conv, temperature, max_tokens, api_dict=
                 messages=messages,
                 n=1,
                 temperature=temperature,
-                max_tokens=max_tokens,
+                **(
+                    {"max_completion_tokens": max_tokens}
+                    if use_completion_tokens
+                    else {"max_tokens": max_tokens}
+                ),
             )
             output = response["choices"][0]["message"]["content"]
             break
         except openai.error.OpenAIError as e:
+            if (
+                isinstance(e, openai.error.InvalidRequestError)
+                and "max_completion_tokens" in str(e)
+                and "max_tokens" in str(e)
+                and not use_completion_tokens
+            ):
+                use_completion_tokens = True
+                continue
             print(type(e), e)
             time.sleep(API_RETRY_SLEEP)
         except openai.error.InvalidRequestError as e:
