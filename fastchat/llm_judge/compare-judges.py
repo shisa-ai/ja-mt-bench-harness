@@ -4,26 +4,31 @@ import pandas as pd
 from tabulate import tabulate
 import os
 import argparse
+from canonicalize_scores import canonicalize_judgments
 
 # File paths for the judgment files - modify if needed
 judgment_files = [
     "data/ja_mt_bench/model_judgment/gpt-4-turbo_single.jsonl",
     "data/ja_mt_bench/model_judgment/gpt-4o_single.jsonl",
     "data/ja_mt_bench/model_judgment/gpt-4.1-2025-04-14_single.jsonl",
-    "data/ja_mt_bench/model_judgment/gpt-4.1-mini-2025-04-14_single.jsonl"
+    "data/ja_mt_bench/model_judgment/gpt-5.1-2025-11-13_single.jsonl",
+    # "data/ja_mt_bench/model_judgment/gpt-4.1-mini-2025-04-14_single.jsonl"
 ]
 
 judge_names = [
     "GPT-4-Turbo",
     "GPT-4o",
     "GPT-4.1",
-    "GPT-4.1-mini"
+    "GPT-5.1",
+    # "GPT-4.1-mini",
 ]
 
 # Function to load judgments
 def load_judgments(file_path):
     with open(file_path, 'r') as f:
-        return [json.loads(line) for line in f]
+        raw = [json.loads(line) for line in f]
+    # Canonicalize to avoid overweighting duplicates
+    return canonicalize_judgments(raw, os.path.basename(file_path))
 
 # Load questions to get categories
 def load_questions(file_path="data/ja_mt_bench/question.jsonl"):
