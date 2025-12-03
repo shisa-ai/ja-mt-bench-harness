@@ -1,29 +1,49 @@
+import argparse
 import json
-import numpy as np
+from itertools import combinations
+
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import seaborn as sns
-from scipy.stats import pearsonr, spearmanr
+from canonicalize_scores import canonicalize_judgments
+from scipy.stats import pearsonr, spearmanr, kendalltau
 
-# File paths for the three judgment files
+# Parse command-line arguments
+parser = argparse.ArgumentParser(description='Compare judge scores across different models')
+parser.add_argument('--filter', type=str, default='',
+                   help='Comma-delimited substrings to include only matching models (e.g., "shisa,tokyotech")')
+parser.add_argument('--exclude', type=str, default='',
+                   help='Comma-delimited substrings to exclude from models (e.g., "LiquidAI,Qwen")')
+args = parser.parse_args()
+
+# Process filter and exclude lists
+filter_list = [f.strip() for f in args.filter.split(',') if f.strip()]
+exclude_list = [e.strip() for e in args.exclude.split(',') if e.strip()]
+
+# File paths for the judgment files - modify if needed
 judgment_files = [
-    "data/ja_mt_bench/model_judgment/gpt-4-turbo_single.jsonl",
-    "data/ja_mt_bench/model_judgment/gpt-4o_single.jsonl",
+    "data/ja_mt_bench/model_judgment/gpt-4-turbo-2024-04-09_single.jsonl",
+    "data/ja_mt_bench/model_judgment/gpt-4o-2024-08-06_single.jsonl",
     "data/ja_mt_bench/model_judgment/gpt-4.1-2025-04-14_single.jsonl",
-    "data/ja_mt_bench/model_judgment/gpt-4.1-mini-2025-04-14_single.jsonl"
+    "data/ja_mt_bench/model_judgment/gpt-5.1-2025-11-13_single.jsonl",
+    # "data/ja_mt_bench/model_judgment/gpt-4.1-mini-2025-04-14_single.jsonl"
 ]
 
 judge_names = [
     "GPT-4-Turbo",
     "GPT-4o",
     "GPT-4.1",
-    "GPT-4.1-mini"
+    "GPT-5.1",
+    # "GPT-4.1-mini",
 ]
 
-# Function to load judgments
+
+# Function to load judgments (canonicalized to avoid duplicate overweighting)
 def load_judgments(file_path):
     with open(file_path, 'r') as f:
-        return [json.loads(line) for line in f]
+        raw = [json.loads(line) for line in f]
+    return canonicalize_judgments(raw, file_path)
 
 # Load judgments from the three files
 judgments = [load_judgments(file) for file in judgment_files]
@@ -57,6 +77,18 @@ for key in common_keys:
     data.append(row)
 
 df = pd.DataFrame(data)
+
+# Apply filtering based on command-line arguments
+if filter_list:
+    print(f"\n=== Applying filter: including models matching {filter_list} ===")
+    df = df[df['model'].apply(lambda m: any(f in m for f in filter_list))]
+
+if exclude_list:
+    print(f"\n=== Applying exclusion: excluding models matching {exclude_list} ===")
+    df = df[~df['model'].apply(lambda m: any(e in m for e in exclude_list))]
+
+if filter_list or exclude_list:
+    print(f"Filtered to {len(df['model'].unique())} unique models: {sorted(df['model'].unique())}\n")
 
 # Calculate overall statistics
 print("=== Overall Statistics ===")
@@ -168,14 +200,71 @@ print("Correlation heatmap saved as 'judge_correlation_heatmap.png'")
 
 # Create summary table with average scores by model
 model_scores = df.groupby('model')[judge_names].mean().reset_index()
+model_scores_idx = model_scores.set_index('model')
+baseline_judge = "GPT-5.1" if "GPT-5.1" in judge_names else judge_names[0]
+model_scores_sorted = model_scores.sort_values(by=baseline_judge, ascending=False)
 print("\n=== Average Scores by Model ===")
-print(model_scores.to_string(index=False, float_format=lambda x: f"{x:.2f}"))
+print(model_scores_sorted.to_string(index=False, float_format=lambda x: f"{x:.2f}"))
+
+# Line plot of judged models across judges (each line is a model, x-axis is judge)
+plt.figure(figsize=(12, 6))
+ordered_models = model_scores_sorted['model'].tolist()  # keep legend order consistent
+judge_order = judge_names  # keep x-axis order consistent
+for model in ordered_models:
+    scores = model_scores_idx.loc[model, judge_order]
+    plt.plot(judge_order, scores, marker='o', label=model, linewidth=2)
+plt.title('Average Model Scores Across Judges')
+plt.xlabel('Judge')
+plt.ylabel('Average Score')
+plt.xticks(rotation=45, ha='right')
+plt.ylim(0, 10)
+plt.grid(True, alpha=0.3)
+plt.legend(title='Model', bbox_to_anchor=(1.02, 0.5), loc='center left', borderaxespad=0)
+plt.tight_layout(rect=(0, 0, 0.82, 1))
+plt.savefig('judge_scores_by_model.png')
+print("Line plot saved as 'judge_scores_by_model.png'")
 
 # Calculate overall average scores for each judge
 avg_scores = {judge: df[judge].mean() for judge in judge_names}
 print("\n=== Overall Average Scores ===")
 for judge, score in avg_scores.items():
     print(f"{judge}: {score:.2f}")
+
+# Ranking stability versus baseline judge
+if len(model_scores) > 1:
+    print(f"\n=== Ranking Stability (vs {baseline_judge}) ===")
+    baseline_ranks = model_scores_idx[baseline_judge].rank(ascending=False, method='dense')
+    baseline_ranks = baseline_ranks.astype(int)
+    baseline_order = model_scores_idx[baseline_judge].sort_values(ascending=False)
+    print(f"Baseline order ({baseline_judge}): {', '.join(baseline_order.index)}")
+
+    for judge in judge_names:
+        if judge == baseline_judge:
+            continue
+
+        judge_ranks = model_scores_idx[judge].rank(ascending=False, method='dense').astype(int)
+        tau, p_tau = kendalltau(baseline_ranks, judge_ranks)
+        rank_deltas = (judge_ranks - baseline_ranks).astype(int)
+        movers = [
+            f"{model} {'up' if delta < 0 else 'down'} {abs(delta)}"
+            for model, delta in rank_deltas.items() if delta != 0
+        ]
+
+        pair_flips = []
+        for a, b in combinations(model_scores_idx.index, 2):
+            base_cmp = model_scores_idx.at[a, baseline_judge] - model_scores_idx.at[b, baseline_judge]
+            judge_cmp = model_scores_idx.at[a, judge] - model_scores_idx.at[b, judge]
+            if base_cmp == 0 or judge_cmp == 0:
+                continue  # skip ties
+            if base_cmp * judge_cmp < 0:
+                pair_flips.append(f"{a} vs {b}")
+
+        movers_text = ", ".join(movers) if movers else "no rank changes vs baseline"
+        flips_preview = ", ".join(pair_flips[:8]) if pair_flips else "none"
+        if len(pair_flips) > 8:
+            flips_preview += f", ... (+{len(pair_flips) - 8} more)"
+
+        print(f"{judge}: Kendall tau={tau:.3f} (p={p_tau:.3f}); {movers_text}; pairwise flips ({len(pair_flips)}): {flips_preview}")
 
 # Save the detailed DataFrame to CSV for further analysis
 df.to_csv('judge_comparison_details.csv', index=False)
