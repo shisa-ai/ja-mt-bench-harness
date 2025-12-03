@@ -4,6 +4,7 @@ python3 show_result.py --mode [single|pairwise-baseline|pairwise-all]
 """
 import argparse
 import pandas as pd
+from canonicalize_scores import canonicalize_judgments
 
 
 def display_result_single(args):
@@ -15,7 +16,18 @@ def display_result_single(args):
         input_file = args.input_file
 
     print(f"Input file: {input_file}")
-    df_all = pd.read_json(input_file, lines=True)
+
+    # Load raw judgments
+    import json
+    with open(input_file, 'r') as f:
+        raw_judgments = [json.loads(line) for line in f]
+
+    # Canonicalize: compute mean per (model, question_id, turn)
+    # This ensures equal weight per question regardless of duplicate judgments
+    canonical_judgments = canonicalize_judgments(raw_judgments, args.judge_model)
+
+    # Convert to DataFrame
+    df_all = pd.DataFrame(canonical_judgments)
     df = df_all[["model", "score", "turn"]]
     df = df[df["score"] != -1]
 

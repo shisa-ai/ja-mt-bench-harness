@@ -4,6 +4,7 @@ import argparse
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from canonicalize_scores import canonicalize_judgments
 from matplotlib.patches import Circle, RegularPolygon
 from matplotlib.path import Path
 from matplotlib.projections import register_projection
@@ -190,9 +191,10 @@ def analyze_mt_bench_scores(
     for idx, (judgment_file, judge_name) in enumerate(zip(judgment_files, judge_names)):
         try:
             with open(judgment_file, "r") as f:
-                judgments = [json.loads(line) for line in f]
+                raw_judgments = [json.loads(line) for line in f]
+                judgments = canonicalize_judgments(raw_judgments, judge_name)
                 all_judgments[judge_name] = judgments
-                print(f"Loaded {len(judgments)} judgments from {judgment_file}")
+                print(f"Loaded and canonicalized {len(judgments)} judgments from {judgment_file}")
         except Exception as e:
             print(f"Error loading {judgment_file}: {e}")
             continue
@@ -289,18 +291,29 @@ def analyze_mt_bench_scores(
                 continue
                 
             print(f"\n{judge_name}:")
-            
-            # Safely get turn averages with default of 0 if turn doesn't exist
-            turn1_avg = avg_scores_by_judge_model_turn[judge_name][model].get(1, 0)
-            turn2_avg = avg_scores_by_judge_model_turn[judge_name][model].get(2, 0)
-            overall_avg = (turn1_avg + turn2_avg) / 2 if turn2_avg > 0 else turn1_avg
 
-            print(f"  Turn 1 Average: {turn1_avg:.2f}")
-            if turn2_avg > 0:
-                print(f"  Turn 2 Average: {turn2_avg:.2f}")
-                print(f"  Overall Average: {overall_avg:.2f}")
+            # Safely get turn averages with None default to distinguish missing from 0.0
+            turn1_avg = avg_scores_by_judge_model_turn[judge_name][model].get(1, None)
+            turn2_avg = avg_scores_by_judge_model_turn[judge_name][model].get(2, None)
+
+            # Calculate overall average based on available turns
+            if turn1_avg is not None and turn2_avg is not None:
+                overall_avg = (turn1_avg + turn2_avg) / 2
+            elif turn1_avg is not None:
+                overall_avg = turn1_avg
+                print(f"  ⚠️  Warning: Turn 2 missing for {model}, using Turn 1 only")
+            elif turn2_avg is not None:
+                overall_avg = turn2_avg
+                print(f"  ⚠️  Warning: Turn 1 missing for {model}, using Turn 2 only")
             else:
-                print("  Turn 2: Not evaluated")
+                print(f"  ⚠️  Warning: No turns available for {model}, skipping")
+                continue
+
+            if turn1_avg is not None:
+                print(f"  Turn 1 Average: {turn1_avg:.2f}")
+            if turn2_avg is not None:
+                print(f"  Turn 2 Average: {turn2_avg:.2f}")
+            print(f"  Overall Average: {overall_avg:.2f}")
 
             # Only print category scores if the turn exists
             if 1 in avg_scores_by_judge_model_turn_category[judge_name][model]:

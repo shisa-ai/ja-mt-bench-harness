@@ -94,13 +94,21 @@ def analyze_mt_bench_scores(
 
     print(f"Found {len(judgment_files)} judgment file(s) for judge(s): {sorted(list(set(available_judge_names)))}")
 
+    # Import canonicalization function
+    from canonicalize_scores import canonicalize_judgments
+
     all_judgments_by_judge = {}
     for judgment_file, current_judge_name in zip(judgment_files, available_judge_names):
         try:
             with open(judgment_file, "r") as f:
-                judgments = [json.loads(line) for line in f]
-                all_judgments_by_judge[current_judge_name] = judgments
-                print(f"Loaded {len(judgments)} judgments from {judgment_file} for judge '{current_judge_name}'")
+                raw_judgments = [json.loads(line) for line in f]
+
+            # Canonicalize: compute mean per (model, question_id, turn)
+            # This ensures equal weight per question regardless of duplicate judgments
+            judgments = canonicalize_judgments(raw_judgments, current_judge_name)
+
+            all_judgments_by_judge[current_judge_name] = judgments
+            print(f"Loaded and canonicalized {len(judgments)} unique questions from {judgment_file} for judge '{current_judge_name}'")
         except Exception as e:
             print(f"Error loading {judgment_file}: {e}")
             continue
