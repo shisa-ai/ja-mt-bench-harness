@@ -1,3 +1,68 @@
+# python gen_judgment.py --bench-name ja_mt_bench --model-list shisa-ai/llama3.3-70b-merge-nuslerp-168-176-base --judge-model gpt-4-turbo --mode single --parallel 2
+
+shisa-ai/168-llama3.3-70b-v2.1-sft
+
+OPENAI_API_BASE=http://localhost:8000/v1 python gen_api_answer.py --bench-name ja_mt_bench --model shisa-ai/168-llama3.3-70b-v2.1-sft --parallel 80
+
+## Generate new model answers
+
+```
+OPENAI_API_BASE=http://localhost:8000/v1 python gen_api_answer.py \
+  --bench-name ja_mt_bench \
+  --model shisa-ai/168-llama3.3-70b-v2.1-sft \
+  --parallel 80
+```
+
+- Use a higher `--parallel` only if your backend can handle it; reduce for rate limits.
+- Outputs land in `data/ja_mt_bench/model_answer/<model>.jsonl`.
+
+## Current judge models in use
+
+- gpt-4-turbo-2024-04-09
+- gpt-4o-2024-08-06
+- gpt-4.1-2025-04-14
+- gpt-4.1-mini-2025-04-14
+- gpt-5.1-2025-11-13
+
+## How to run judgments (single-mode example)
+
+```
+python gen_judgment.py \
+  --bench-name ja_mt_bench \
+  --model-list shisa-ai/shisa-v2-llama3.3-70b \
+  --judge-model gpt-5.1-2025-11-13 \
+  --mode single \
+  --parallel 2
+```
+
+- For local/in-house models (with a slash in the name), set `OPENAI_API_BASE` if needed (e.g., `http://localhost:8000/v1`).
+- Output lands in `data/ja_mt_bench/model_judgment/<judge>_single.jsonl`.
+- Use `--skip_confirm` to avoid the prompt; increase `--parallel` carefully if your backend can handle more QPS.
+
+## Adding a new OpenAI judge model
+
+1) Whitelist the model name in `fastchat/model/model_adapter.py` inside `OPENAI_MODEL_LIST` (used to route to OpenAI API + ChatGPT template).  
+2) Ensure a prompt entry exists in `data/judge_prompts.jsonl` for the mode you need (e.g., `single-v1`, `single-math-v1`, etc.)—usually already present.  
+3) Invoke `gen_judgment.py` with `--judge-model <new-model-name>` as in the run command above.  
+4) Downstream reports (e.g., `compare-judges.py`, `run.sh`) only show the judge if its judgment file is present; to keep it in regular comparisons, add its path/name to the hardcoded `judgment_files`/`judge_names` lists in those scripts.
+
+## Generating judge comparison tables/plots
+
+- Tables: `python compare-judges.py` (writes `judge_comparison_table.txt`). Use `--include-incomplete` to keep models missing some judges.  
+- Stats/plots: `python judge-comparison-stats.py` (writes scatter/box/hist/heatmap PNGs and `judge_comparison_details.csv`).  
+- These scripts expect judgment JSONL files under `data/ja_mt_bench/model_judgment/` named `<judge>_single.jsonl` (update the hardcoded `judgment_files`/`judge_names` inside the scripts when adding a new judge).
+
+## Get list of models with judgments
+
+Without `rg`, from `judge_comparison_table.txt` headers:
+```
+grep -E '^[^=].*/' judge_comparison_table.txt | awk '{print $1}' | sort -u
+```
+
+
+----
+OLD README.md
+
 # What has been added to the multilingual fork?
 All of the following datasets have been translated using machine learning before being checked by a native speaker of that language. References answers are added where available. When reference answers are unavailable, math, reasoning and coding questions are removed.
 * [German MT-Bench](https://huggingface.co/datasets/VAGOsolutions/MT-Bench-TrueGerman) [source](https://github.com/mayflower/FastEval/blob/main/data/mt-bench/questions_de.json)
